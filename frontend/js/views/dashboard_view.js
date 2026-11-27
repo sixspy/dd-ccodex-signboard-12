@@ -19,6 +19,9 @@ window.SB_VIEWS["dashboard-view"] = {
       { k: "pubs", l: "正式发布", v: d.official_publications },
       { k: "shadows", l: "待升正影子", v: d.open_shadows },
       { k: "ov", l: "生效覆盖", v: d.active_overrides },
+      { k: "rp", l: "推屏治理事件", v: d.remote_push_events },
+      { k: "drill", l: "演练短路", v: d.remote_push_drills },
+      { k: "contend", l: "互斥争用", v: d.remote_push_contentions },
     ];
   }
 };

@@ -26,11 +26,21 @@ def dashboard(authorization: str | None = Header(default=None)):
         overrides = conn.execute(
             "SELECT COUNT(*) c FROM overrides WHERE official=1 AND active=1"
         ).fetchone()["c"]
+        rp_events = conn.execute(
+            "SELECT COUNT(*) c FROM audit_log WHERE action LIKE 'remote_push%'"
+        ).fetchone()["c"]
+        rp_drills = conn.execute(
+            "SELECT COUNT(*) c FROM audit_log WHERE action='remote_push.drill_short_circuit'"
+        ).fetchone()["c"]
+        rp_contentions = conn.execute(
+            "SELECT COUNT(*) c FROM audit_log WHERE action='remote_push.contended'"
+        ).fetchone()["c"]
     return {
         "product": PRODUCT_META["name"],
         "domain": PRODUCT_META["domain"],
         "sub": PRODUCT_META["sub"],
         "skeleton": PRODUCT_META["skeleton"],
+        "signboard": "signboard-12",
         "screens": screens,
         "online_screens": online,
         "ready_assets": assets,
@@ -38,4 +48,7 @@ def dashboard(authorization: str | None = Header(default=None)):
         "open_shadows": shadows,
         "panic_events": panics,
         "active_overrides": overrides,
+        "remote_push_events": rp_events,
+        "remote_push_drills": rp_drills,
+        "remote_push_contentions": rp_contentions,
     }

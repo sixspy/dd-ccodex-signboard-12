@@ -20,6 +20,7 @@ from panic_svc import router as panic_router
 from playlists_svc import router as playlists_router
 from publish_svc import router as publish_router
 from screens_svc import router as screens_router
+from stubs_svc import alias_router as remote_push_alias_router
 from stubs_svc import router as stubs_router
 from windows_svc import router as windows_router
 from zones_svc import router as zones_router
@@ -55,6 +56,9 @@ for r in (
     stubs_router,
 ):
     app.include_router(r)
+
+# signboard-12 远程推屏顶层路径别名（/api/remote_push、/api/remote-push）。
+app.include_router(remote_push_alias_router)
 
 
 @app.on_event("startup")

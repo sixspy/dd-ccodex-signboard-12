@@ -1,4 +1,10 @@
-"""在线求值：某屏此刻应播什么。"""
+"""在线求值：某屏此刻应播什么。
+
+signboard-12：求值只认正式区（screens.note、official=1 的 overrides/publications）。
+响应在每个分支都带 config_scope='official' 与 official_note/screen_note，且绝不
+读取 audit_log / change_history 中记录的演练提案脏字，避免“演练脏备注被当成
+正式配置”。
+"""
 from __future__ import annotations
 
 from datetime import datetime
@@ -21,6 +27,16 @@ def evaluate_screen(body: dict, authorization: str | None = Header(default=None)
         screen = conn.execute("SELECT * FROM screens WHERE id=?", (screen_id,)).fetchone()
         if not screen:
             raise HTTPException(404, "屏幕不存在")
+
+        # 唯一可信的屏幕备注来源：正式列 screens.note。
+        official_note = screen["note"] or ""
+        scope = {
+            "config_scope": "official",
+            "official_note": official_note,
+            "screen_note": official_note,
+            "note_source": "screens.note@official",
+        }
+
         ov = conn.execute(
             "SELECT * FROM overrides WHERE screen_id=? AND official=1 AND active=1 ORDER BY id DESC LIMIT 1",
             (screen_id,),
@@ -46,21 +62,22 @@ def evaluate_screen(body: dict, authorization: str | None = Header(default=None)
                     ).fetchall()
                 )
                 result["play"] = {"kind": "playlist", "items": items}
-            return result
+            return {**result, **scope}
+
         pub = conn.execute(
             "SELECT * FROM publications WHERE screen_id=? AND official=1 AND status='published'",
             (screen_id,),
         ).fetchone()
         if not pub:
-            return {"source": "empty", "play": None, "now_hm": now_hm, "reason": "无正式发布"}
+            return {"source": "empty", "play": None, "now_hm": now_hm, "reason": "无正式发布", **scope}
         window = conn.execute(
             "SELECT * FROM time_windows WHERE id=?",
             (pub["window_id"],),
         ).fetchone()
         if weekday not in set((window["weekdays"] or "").split(",")):
-            return {"source": "publication", "play": None, "reason": "非开放星期", "now_hm": now_hm}
+            return {"source": "publication", "play": None, "reason": "非开放星期", "now_hm": now_hm, **scope}
         if not window_covers(window["start_hm"], window["end_hm"], now_hm):
-            return {"source": "publication", "play": None, "reason": "不在时段窗内", "now_hm": now_hm}
+            return {"source": "publication", "play": None, "reason": "不在时段窗内", "now_hm": now_hm, **scope}
         items = rows_to_list(
             conn.execute(
                 """
@@ -78,4 +95,5 @@ def evaluate_screen(body: dict, authorization: str | None = Header(default=None)
             "window_id": pub["window_id"],
             "play": {"kind": "playlist", "items": items},
             "now_hm": now_hm,
+            **scope,
         }
